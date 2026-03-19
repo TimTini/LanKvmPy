@@ -1,0 +1,2 @@
+[console_scripts]
+lan-kvm = lankvm.cli:main

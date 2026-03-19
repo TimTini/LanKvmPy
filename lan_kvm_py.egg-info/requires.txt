@@ -1,0 +1,4 @@
+msgpack>=1.0.8
+
+[dev]
+pytest>=8.2

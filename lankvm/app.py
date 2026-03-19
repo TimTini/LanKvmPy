@@ -61,6 +61,8 @@ class LanKvmApp:
         self._lock = threading.RLock()
         self._stop = threading.Event()
         self._state = SessionState()
+        # Fail at startup if the selected protocol backend is unavailable.
+        FrameCodec(config.shared_secret)
         self._edge_detector = EdgeDetector(
             config.handoff_edge,
             delay_ms=config.switch_delay_ms,
