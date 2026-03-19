@@ -40,6 +40,24 @@ python main.py
 Mặc định app sẽ tự dùng `config.toml` trong thư mục hiện tại và log level `DEBUG`.
 Nếu cần override vẫn có thể chạy `python main.py --config other.toml --log-level INFO`.
 
+## Peer Không Cần config.toml
+
+Nếu máy chính chạy `listener`, bạn có thể tạo sẵn lệnh cho máy peer mà không cần copy `config.toml` sang peer.
+
+Trên máy chính:
+
+```powershell
+python main.py --print-peer-launch
+```
+
+Lệnh này sẽ in ra một command kiểu:
+
+```powershell
+python main.py --preset "<token>"
+```
+
+Chỉ cần copy command đó sang máy peer và chạy. Máy peer sẽ tự dùng preset đã được sinh từ config của máy chính.
+
 ## Cấu hình tối thiểu
 
 ```toml

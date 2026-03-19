@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 import tomllib
 
 
@@ -39,6 +39,10 @@ def load_config(path: str | Path) -> AppConfig:
     with config_path.open("rb") as handle:
         raw = tomllib.load(handle)
 
+    return parse_config_mapping(raw)
+
+
+def parse_config_mapping(raw: dict[str, Any]) -> AppConfig:
     return AppConfig(
         machine_id=_require_str(raw, "machine_id"),
         role=_require_role(raw, "role"),
@@ -55,6 +59,25 @@ def load_config(path: str | Path) -> AppConfig:
         reconnect_ms=_require_int(raw, "reconnect_ms", minimum=100, maximum=10000, default=1000),
         failsafe_hotkey=_require_hotkey(raw, "failsafe_hotkey", ("ctrl", "alt", "f12")),
     )
+
+
+def config_to_mapping(config: AppConfig) -> dict[str, Any]:
+    return {
+        "machine_id": config.machine_id,
+        "role": config.role,
+        "peer_host": config.peer_host,
+        "listen_host": config.listen_host,
+        "listen_port": config.listen_port,
+        "handoff_edge": config.handoff_edge,
+        "entry_edge": config.entry_edge,
+        "switch_delay_ms": config.switch_delay_ms,
+        "shared_secret": config.shared_secret,
+        "heartbeat_ms": config.heartbeat_ms,
+        "dead_zone_px": config.dead_zone_px,
+        "max_mouse_hz": config.max_mouse_hz,
+        "reconnect_ms": config.reconnect_ms,
+        "failsafe_hotkey": list(config.failsafe_hotkey),
+    }
 
 
 def _require_edge(raw: dict, field: str) -> Edge:
