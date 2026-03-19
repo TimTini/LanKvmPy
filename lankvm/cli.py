@@ -10,8 +10,8 @@ from .config import load_config
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="LAN KVM for two Windows machines")
-    parser.add_argument("--config", required=True, help="Path to config.toml")
-    parser.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
+    parser.add_argument("--config", default="config.toml", help="Path to config.toml")
+    parser.add_argument("--log-level", default="DEBUG", choices=["DEBUG", "INFO", "WARNING", "ERROR"])
     args = parser.parse_args()
 
     logging.basicConfig(

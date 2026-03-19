@@ -34,8 +34,11 @@ Nếu máy chưa có alias `python`, dùng đường dẫn Python thật hoặc 
 4. Chạy app:
 
 ```powershell
-python main.py --config config.toml
+python main.py
 ```
+
+Mặc định app sẽ tự dùng `config.toml` trong thư mục hiện tại và log level `DEBUG`.
+Nếu cần override vẫn có thể chạy `python main.py --config other.toml --log-level INFO`.
 
 ## Cấu hình tối thiểu
 
