@@ -63,15 +63,25 @@ def normalize_on_edge(x: int, y: int, screen: ScreenInfo, edge: Edge) -> float:
     return _clamp((x - screen.left) / span, 0.0, 1.0)
 
 
-def position_for_entry(edge: Edge, normalized: float, screen: ScreenInfo) -> tuple[int, int]:
+def position_for_entry(
+    edge: Edge,
+    normalized: float,
+    screen: ScreenInfo,
+    *,
+    inset_px: int = ENTRY_PADDING_PX,
+) -> tuple[int, int]:
     normalized = _clamp(normalized, 0.0, 1.0)
+    if edge in ("left", "right"):
+        inset_px = min(max(0, int(inset_px)), max(screen.width - 1, 0))
+    else:
+        inset_px = min(max(0, int(inset_px)), max(screen.height - 1, 0))
     if edge == "left":
-        return screen.left + ENTRY_PADDING_PX, _scaled_axis(screen.top, screen.height, normalized)
+        return screen.left + inset_px, _scaled_axis(screen.top, screen.height, normalized)
     if edge == "right":
-        return screen.right - ENTRY_PADDING_PX, _scaled_axis(screen.top, screen.height, normalized)
+        return screen.right - inset_px, _scaled_axis(screen.top, screen.height, normalized)
     if edge == "top":
-        return _scaled_axis(screen.left, screen.width, normalized), screen.top + ENTRY_PADDING_PX
-    return _scaled_axis(screen.left, screen.width, normalized), screen.bottom - ENTRY_PADDING_PX
+        return _scaled_axis(screen.left, screen.width, normalized), screen.top + inset_px
+    return _scaled_axis(screen.left, screen.width, normalized), screen.bottom - inset_px
 
 
 def is_at_edge(x: int, y: int, screen: ScreenInfo, edge: Edge, dead_zone_px: int) -> bool:

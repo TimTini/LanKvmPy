@@ -12,6 +12,14 @@ def test_position_for_entry_right_edge_stays_inside_screen() -> None:
     assert 0 <= y <= screen.bottom
 
 
+def test_position_for_entry_can_be_pushed_outside_dead_zone() -> None:
+    screen = ScreenInfo(left=0, top=0, width=1920, height=1080)
+
+    x, _ = position_for_entry("left", 0.5, screen, inset_px=6)
+
+    assert x == 6
+
+
 def test_normalize_on_edge_uses_orthogonal_axis() -> None:
     screen = ScreenInfo(left=0, top=0, width=100, height=200)
 

@@ -87,6 +87,7 @@ class LanKvmApp:
         self._peer_screen: ScreenInfo | None = None
         self._pressed_tokens: set[str] = set()
         self._last_local_mouse_pt: tuple[int, int] | None = None
+        self._remote_exit_armed = False
 
     def run(self) -> None:
         self._logger.info("starting LAN KVM app for machine_id=%s role=%s", self._config.machine_id, self._config.role)
@@ -110,14 +111,17 @@ class LanKvmApp:
         with self._lock:
             if self._state.mode == SessionMode.CONTROLLING_PEER:
                 if self._last_local_mouse_pt is None:
-                    self._last_local_mouse_pt = (event.x, event.y)
+                    self._last_local_mouse_pt = self._local_hold_position(event.x, event.y)
                     return True
 
                 dx = event.x - self._last_local_mouse_pt[0]
                 dy = event.y - self._last_local_mouse_pt[1]
-                self._last_local_mouse_pt = (event.x, event.y)
                 if dx or dy:
                     self._motion.add(dx, dy)
+                hold_position = self._local_hold_position(event.x, event.y)
+                if hold_position != (event.x, event.y):
+                    self._backend.set_cursor_position(*hold_position)
+                self._last_local_mouse_pt = hold_position
                 return True
 
             if self._state.mode == SessionMode.CONTROLLED_BY_PEER:
@@ -193,9 +197,8 @@ class LanKvmApp:
         self._state.begin_local_capture(self._peer_machine_id, normalized)
         self._edge_detector.reset()
         self._motion.reset()
-        self._last_local_mouse_pt = (x, y)
-        local_screen = self._backend.screen_info()
-        local_hold_position = position_for_entry(self._config.handoff_edge, normalized, local_screen)
+        local_hold_position = self._local_hold_position(x, y)
+        self._last_local_mouse_pt = local_hold_position
         self._backend.set_cursor_position(*local_hold_position)
         self._connector.send(
             {
@@ -212,7 +215,13 @@ class LanKvmApp:
         self._edge_detector.reset()
         self._last_local_mouse_pt = None
         self._pressed_tokens.clear()
-        restore_pos = position_for_entry(restore_edge, normalized, self._backend.screen_info())
+        self._remote_exit_armed = False
+        restore_pos = position_for_entry(
+            restore_edge,
+            normalized,
+            self._backend.screen_info(),
+            inset_px=self._edge_inset_px(),
+        )
         self._backend.set_cursor_position(*restore_pos)
 
     def _peer_ready(self) -> bool:
@@ -244,10 +253,18 @@ class LanKvmApp:
             self._edge_detector.reset()
             self._last_local_mouse_pt = None
             self._pressed_tokens.clear()
+            self._remote_exit_armed = False
 
             if previous == SessionMode.CONTROLLING_PEER:
                 restore = self._state.last_local_handoff_norm
-                self._backend.set_cursor_position(*position_for_entry(self._config.handoff_edge, restore, self._backend.screen_info()))
+                self._backend.set_cursor_position(
+                    *position_for_entry(
+                        self._config.handoff_edge,
+                        restore,
+                        self._backend.screen_info(),
+                        inset_px=self._edge_inset_px(),
+                    )
+                )
 
         self._logger.warning("connection lost: %s", reason)
 
@@ -322,7 +339,13 @@ class LanKvmApp:
             return
 
         self._state.accept_remote_capture(from_machine_id if isinstance(from_machine_id, str) else None)
-        entry_position = position_for_entry(self._config.entry_edge, normalized, self._backend.screen_info())
+        self._remote_exit_armed = False
+        entry_position = position_for_entry(
+            self._config.entry_edge,
+            normalized,
+            self._backend.screen_info(),
+            inset_px=self._edge_inset_px(),
+        )
         self._backend.set_cursor_position(*entry_position)
         self._logger.info("peer control entered at normalized=%.3f", normalized)
 
@@ -378,7 +401,13 @@ class LanKvmApp:
 
         x, y = self._backend.get_cursor_position()
         screen = self._backend.screen_info()
-        if not is_at_edge(x, y, screen, self._config.handoff_edge, self._config.dead_zone_px):
+        at_return_edge = is_at_edge(x, y, screen, self._config.handoff_edge, self._config.dead_zone_px)
+        if not self._remote_exit_armed:
+            if at_return_edge:
+                return
+            self._remote_exit_armed = True
+            return
+        if not at_return_edge:
             return
 
         normalized = normalize_on_edge(x, y, screen, self._config.handoff_edge)
@@ -390,6 +419,7 @@ class LanKvmApp:
             }
         )
         self._state.release_remote_capture(normalized)
+        self._remote_exit_armed = False
         self._logger.info("remote side hit return edge, control released at normalized=%.3f", normalized)
 
     def _send_mouse_delta(self, dx: int, dy: int) -> None:
@@ -434,6 +464,19 @@ class LanKvmApp:
     def _failsafe_pressed(self) -> bool:
         needed = {_normalize_hotkey_token(token) for token in self._config.failsafe_hotkey}
         return needed.issubset(self._pressed_tokens)
+
+    def _edge_inset_px(self) -> int:
+        return max(self._config.dead_zone_px + 2, 6)
+
+    def _local_hold_position(self, x: int, y: int) -> tuple[int, int]:
+        screen = self._backend.screen_info()
+        normalized = normalize_on_edge(x, y, screen, self._config.handoff_edge)
+        return position_for_entry(
+            self._config.handoff_edge,
+            normalized,
+            screen,
+            inset_px=self._edge_inset_px(),
+        )
 
 
 def _screen_to_payload(screen: ScreenInfo) -> dict[str, int]:
