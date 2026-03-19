@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lan-kvm-py"
+version = "0.1.0"
+description = "LAN keyboard and mouse handoff for two Windows machines"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "msgpack>=1.0.8",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+]
+
+[project.scripts]
+lan-kvm = "lankvm.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lankvm*"]
